@@ -1,4 +1,6 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Restaurant(models.Model):
@@ -65,3 +67,64 @@ class RestaurantMenuItem(models.Model):
         unique_together = [
             ['restaurant', 'product']
         ]
+
+
+class Order(models.Model):
+    firstname = models.CharField(
+        max_length = 255,
+        verbose_name = 'Имя',
+    )
+    lastname = models.CharField(
+        max_length = 255,
+        verbose_name='Фамилия',
+    )
+    phone_number = PhoneNumberField(
+        unique=True,
+        verbose_name='Номер телефона',
+    )
+    address = models.CharField(
+        max_length = 255,
+        verbose_name='Адрес',
+    )
+
+    def add_product(self, id, quantity):
+        OrderElement.objects.create(
+            product=Product.objects.get(id=id),
+            quantity=quantity,
+            order=self
+        )
+
+    class Meta:
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
+
+    def __str__(self):
+        return f"Заказ {self.firstname} {self.lastname} {self.address}"
+
+
+class OrderElement(models.Model):
+    product=models.ForeignKey(
+        Product,
+        related_name = 'product',
+        on_delete = models.CASCADE,
+        verbose_name = 'Товар',
+    )
+    quantity = models.IntegerField(
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(100)],
+        verbose_name='Количество',
+    )
+    order = models.ForeignKey(
+        Order,
+        related_name='order_elements',
+        on_delete=models.CASCADE,
+        verbose_name='Заказ',
+    )
+
+    class Meta:
+        verbose_name = 'Элемент заказа'
+        verbose_name_plural = 'Элементы заказа'
+
+    def __str__(self):
+        return f"Входит в заказ #{self.order.pk} {self.product} ({self.quantity} шт.)"
